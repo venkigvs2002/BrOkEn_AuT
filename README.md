@@ -14,3 +14,6 @@ Clone the repository:
 ```bash
 git clone https://github.com/your-username/BrOkEn_AuT.git
 cd BrOkEn_AuT
+
+to install dependencies
+pip install -r requirements.txt
