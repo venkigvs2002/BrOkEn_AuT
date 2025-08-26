@@ -1,0 +1,19 @@
+{
+  "roles": [
+    {
+      "name": "superadmin",
+      "headers": {
+        "Authorization": "apiKey]"
+      }
+    },
+    {
+      "name": "reader",
+      "headers": {
+        "Authorization": "apiKey"
+      }
+    }
+  ],
+  "settings": {
+    "expected_status_code": 403
+  }
+}
