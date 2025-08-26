@@ -136,20 +136,20 @@ def generate_report(output_file, summary, vuln_table, full_table):
         out.write(full_table.get_string())
     cprint(f"\n✅ Report saved to '{output_file}'", "green")
 
-def test_endpoints(requests_data, user_roles, expected_status, output_file):
+def test_endpoints(requests_data, user_roles, expected_status, output_file, proxy_url=None):
     """The main testing function."""
     all_results = []
     vulnerabilities = []
     highest_priv_role = user_roles[0]
     lower_priv_roles = user_roles[1:]
+    proxies = {'http': proxy_url, 'https': proxy_url} if proxy_url else None
 
     for i, req_data in enumerate(requests_data, 1):
         url, method, body, original_headers = req_data.values()
         print(f"\nTesting Endpoint #{i}: {method} {url}")
         try:
-            baseline_headers = original_headers.copy()
-            baseline_headers.update(highest_priv_role['headers'])
-            baseline_resp = requests.request(method, url, headers=baseline_headers, data=body, timeout=10, verify=False)
+            baseline_headers = highest_priv_role['headers']
+            baseline_resp = requests.request(method, url, headers=baseline_headers, data=body, timeout=10, verify=False, proxies=proxies)
             all_results.append([i, highest_priv_role['name'], method, url, baseline_resp.status_code, "Baseline"])
         except requests.exceptions.RequestException as e:
             cprint(f"Error on baseline request: {e}", "red")
@@ -158,9 +158,8 @@ def test_endpoints(requests_data, user_roles, expected_status, output_file):
 
         for role in lower_priv_roles:
             try:
-                role_headers = original_headers.copy()
-                role_headers.update(role['headers'])
-                response = requests.request(method, url, headers=role_headers, data=body, timeout=10, verify=False)
+                role_headers = role['headers']
+                response = requests.request(method, url, headers=role_headers, data=body, timeout=10, verify=False, proxies=proxies)
                 status = response.status_code
                 if status != expected_status:
                     finding = "Potential BAC Bypass!"
@@ -213,19 +212,21 @@ def test_endpoints(requests_data, user_roles, expected_status, output_file):
     
     generate_report(output_file, summary_text, vuln_table_report, full_table)
 
+
 if __name__ == "__main__":
     warnings.filterwarnings("ignore", message="Unverified HTTPS request")
     parser = argparse.ArgumentParser(
         description="BrOkEn_AuT: A tool for finding Broken Access Control vulnerabilities.",
-        epilog="Example: python3 broken_aut.py -c config.json -b burp.xml -o report.txt"
+        epilog="Example: python3 broken_aut.py -c config.json -b burp.xml -o report.txt -p http://127.0.0.1:8080"
     )
     parser.add_argument("-c", "--config", required=True, help="Path to the JSON config file.")
     parser.add_argument("-b", "--burp-file", required=True, help="Path to the Burp XML export.")
     parser.add_argument("-o", "--output-file", required=True, help="Path for the output report.")
+    parser.add_argument("-p", "--proxy", help="Proxy to use for requests (e.g., http://127.0.0.1:8080)")
     args = parser.parse_args()
     print_banner()
     user_roles, expected_status = load_config(args.config)
     if user_roles is None: sys.exit(1)
     requests_data = parse_burp_xml(args.burp_file)
     if not requests_data: sys.exit(1)
-    test_endpoints(requests_data, user_roles, expected_status, args.output_file)
+    test_endpoints(requests_data, user_roles, expected_status, args.output_file, args.proxy)
