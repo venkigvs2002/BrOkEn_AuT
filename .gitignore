@@ -1,0 +1,12 @@
+# Ignore everything
+*
+
+# But keep these files
+!README.md
+!config.example.json
+!requirements.txt
+!broken_aut.py
+
+# Also keep the .gitignore itself
+!.gitignore
+

@@ -1,3 +1,4 @@
 requests
 pyfiglet
 termcolor
+prettytable
